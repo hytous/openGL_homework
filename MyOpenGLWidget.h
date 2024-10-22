@@ -2,6 +2,7 @@
 #define MYOPENGLWIDGET_H
 
 #include <QOpenGLWidget>
+#include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
@@ -46,6 +47,7 @@ private:  // 只在此类中会用到的东西
     典型使用场景：private 通常用于隐藏实现细节，保护类的内部状态，不允许外部或派生类直接访问。
                 这样可以强制使用类的接口函数（public 函数）来修改或访问私有成员，从而保证类的封装性。
      */
+    QOpenGLShaderProgram *shaderProgram;  // 声明 shaderProgram 作为类的成员
     QOpenGLVertexArrayObject vao;  // VAO 成员变量
     QOpenGLBuffer vbo;             // VBO 成员变量
     /*

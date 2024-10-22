@@ -3,9 +3,20 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 
-MyOpenGLWidget::MyOpenGLWidget(QWidget *parent)
-    : QOpenGLWidget(parent)
-{
+MyOpenGLWidget::MyOpenGLWidget(QWidget *parent)  // 类的作用域解析运算符::构造函数的名称  C++ 中，构造函数的名称必须与类的名称完全相同
+    : QOpenGLWidget(parent), shaderProgram(nullptr)  // 初始化 shaderProgram 指针
+{   /*初始化列表
+    上面“: ”后面的东西（即QOpenGLWidget(parent), shaderProgram(nullptr)）叫初始化列表，
+    是在构造函数体执行之前初始化的成员变量，初始化列表中的成员变量会被直接初始化，而不是在构造函数体内赋值。
+
+    若在构造体内初始化（例如 shaderProgram = nullptr;），这实际上是先构造 shaderProgram，然后再进行赋值。
+    在构造体内初始化会导致成员变量先被构造为其默认值（例如，对于指针来说是未定义的），然后再赋值为 nullptr。
+
+    使用初始化列表来初始化成员变量通常更高效
+
+    如果你的类成员是常量（const）或者引用类型（&），
+    你必须在初始化列表中初始化它们，因为它们不能在构造体内被赋值。
+    */
 }
 
 MyOpenGLWidget::~MyOpenGLWidget()
