@@ -48,6 +48,7 @@ private:  // 只在此类中会用到的东西
                 这样可以强制使用类的接口函数（public 函数）来修改或访问私有成员，从而保证类的封装性。
      */
     QOpenGLShaderProgram *shaderProgram;  // 声明 shaderProgram 作为类的成员
+    GLuint texture; // 声明纹理变量
     QOpenGLVertexArrayObject vao;  // VAO 成员变量
     QOpenGLBuffer vbo;             // VBO 成员变量
     /*

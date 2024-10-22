@@ -46,10 +46,11 @@ void MyOpenGLWidget::initializeGL()
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);  // 红，绿，蓝，透明度
 
     // Vertex data for a simple triangle
-    GLfloat vertices[] = {  // 简单三角形的顶点坐标
-        0.0f,  0.5f, 0.0f,  // 上顶点
-        -0.5f, -0.5f, 0.0f, // 左顶点
-        0.5f, -0.5f, 0.0f   // 右顶点
+    GLfloat vertices[] = {
+        // 位置          // 纹理坐标
+        0.0f,  0.5f, 0.0f,  0.5f, 1.0f,   // 顶点 1
+        -0.5f, -0.5f, 0.0f,  0.0f, 0.0f,   // 顶点 2
+        0.5f, -0.5f, 0.0f,  1.0f, 0.0f    // 顶点 3
     };
 
     /* VAO对象是什么情况：
@@ -219,8 +220,12 @@ void MyOpenGLWidget::initializeGL()
      *它指定顶点数据在缓冲区中的起始位置。(void*)0 表示数据从缓冲区的第一个字节开始存储，也就是偏移量为 0。
      *当缓冲区内有多个顶点属性时（如位置和颜色），这个偏移量可以用来指定某个属性在顶点数据中的相对位置。
      */
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);  // 启用顶点属性，参数是上面的index，上面为0这里就是0
+    //修改步长（stride）和偏移量（offset），以便正确读取纹理坐标
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);  // 顶点位置
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));  // 纹理坐标
+    glEnableVertexAttribArray(1);
 
     // 解绑 VBO 和 VAO
     vbo.release();
@@ -299,28 +304,70 @@ void MyOpenGLWidget::initializeGL()
         x 值必须与 index 一致，这样着色器中的变量才能正确接收从 VBO 传递来的数据。
         同一个着色器（x不变），在不同vao对象的上下文中，会读取到不同的属性
      */
+    // 顶点着色器（传递纹理坐标
     shaderProgram->addShaderFromSourceCode(QOpenGLShader::Vertex, R"(
-        #version 460 core
-        layout(location = 0) in vec3 position;  // 顶点位置
-        void main() {
-            gl_Position = vec4(position, 1.0);  // 设置顶点位置
-        }
-    )");
+    #version 460 core
+    layout(location = 0) in vec3 position;  // 顶点位置
+    layout(location = 1) in vec2 texCoord;  // 纹理坐标
+
+    out vec2 TexCoord;  // 向片段着色器传递纹理坐标
+
+    void main() {
+        gl_Position = vec4(position, 1.0);  // 设置顶点位置
+        TexCoord = texCoord;  // 传递纹理坐标
+    }
+)");
+
 
     /*片段着色器（Fragment Shader）：
     用于计算每个片段（像素）的颜色。在这个示例中，输出为红色 (vec4(1.0, 0.0, 0.0, 1.0))。
     out vec4 fragColor;指定fragColor作为片段着色器的输出，fragColor的具体值在main()中获得
      */
+    // 从纹理中采样颜色
+    /*uniform sampler2D texture1;
+     是一个常用的 GLSL（OpenGL Shading Language）声明，
+     用于在着色器中定义一个二维纹理采样器。它不是固定语句，但在实际使用中非常普遍。以下是这个声明的详细说明：
+    uniform：表示这个变量的值在顶点着色器和片段着色器之间是共享的，并且在每次绘制调用中不会改变。这意味着它的值在整个渲染过程中是固定的。
+    sampler2D：这是 GLSL 中的一种特定类型，用于表示二维纹理采样器。它可以用来从绑定到纹理单元的纹理中读取颜色值。
+    texture1：这是变量的名称，你可以根据需要自定义这个名字。在 GLSL 中，变量名可以是任意有效的标识符，但为了可读性，通常会根据用途进行命名。
+     */
     shaderProgram->addShaderFromSourceCode(QOpenGLShader::Fragment, R"(
-        #version 460 core
-        out vec4 fragColor;  // 片段颜色输出
-        void main() {
-            fragColor = vec4(1.0, 0.0, 0.0, 1.0);  // 红色输出
-        }
-    )");
+    #version 460 core
+    in vec2 TexCoord;  // 从顶点着色器接收纹理坐标
+
+    out vec4 fragColor;  // 片段颜色输出
+
+    uniform sampler2D texture1;  // 纹理采样器
+
+    void main() {
+        fragColor = texture(texture1, TexCoord);  // 从纹理中采样颜色
+    }
+)");
+
 
     shaderProgram->link();  // 链接着色器
     shaderProgram->bind();  // 绑定着色器程序
+
+    // 加载纹理图像
+    QImage textureImage(":/textures/001.png");  // 替换为你的纹理图片路径
+    textureImage = textureImage.convertToFormat(QImage::Format_RGBA8888);  // 将图像转换为 RGBA 格式
+
+    // 创建纹理对象
+    // GLuint texture;
+    glEnable(GL_TEXTURE_2D);
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);  // GL_TEXTURE_2D表示正在使用二维纹理
+
+    // 设置纹理参数
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // 将图像数据传递给纹理对象
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, textureImage.width(), textureImage.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, textureImage.bits());
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);  // 解绑纹理
 
 }
 
@@ -379,7 +426,7 @@ void MyOpenGLWidget::paintGL()
 
     // 绑定着色器程序
     shaderProgram->bind();
-
+    glBindTexture(GL_TEXTURE_2D, texture);  // 绑定纹理
     // 绑定vao
     vao.bind();
 
@@ -388,5 +435,6 @@ void MyOpenGLWidget::paintGL()
 
     // 解绑
     vao.release();
+    glBindTexture(GL_TEXTURE_2D, 0);  // 解绑纹理
     shaderProgram->release();  // 释放着色器程序
 }
